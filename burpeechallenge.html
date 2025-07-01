@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Burpee Timer</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #222;
+    color: #eee;
+    text-align: center;
+    padding: 20px;
+  }
+  select, button {
+    font-size: 1.2rem;
+    padding: 10px 20px;
+    margin: 10px;
+  }
+  #timer {
+    font-size: 8rem;
+    margin: 40px 0 10px;
+  }
+  #timeUntilNext {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #4caf50;
+  }
+  #burpeeCount {
+    font-size: 3rem;
+    margin: 20px 0;
+  }
+  #levelName {
+    font-size: 3rem;
+    margin-top: 10px;
+  }
+  .flash {
+    background-color: #4caf50;
+    transition: background-color 0.2s;
+  }
+</style>
+</head>
+<body>
+<h1 style="text-align: center; color: #4caf50; margin-bottom: 20px;">Burpee Timer (20-Minute Challenge)</h1>
+<section style="text-align: center; max-width: 700px; margin: 40px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #eee; background: #333; padding: 25px; border-radius: 12px; box-shadow: 0 0 12px #222;">
+
+
+<label for="levelSelect">Choose your level:</label>
+<select id="levelSelect">
+  <option value="20" data-name="Beginner">Beginner (20 burpees)</option>
+  <option value="40" data-name="Rookie">Rookie (40 burpees)</option>
+  <option value="60" data-name="Active">Active (60 burpees)</option>
+  <option value="80" data-name="Strong">Strong (80 burpees)</option>
+  <option value="100" data-name="Athlete">Athlete (100 burpees)</option>
+  <option value="120" data-name="Beast">Beast (120 burpees)</option>
+  <option value="140" data-name="Champion">Champion (140 burpees)</option>
+  <option value="160" data-name="Warrior">Warrior (160 burpees)</option>
+  <option value="180" data-name="Elite">Elite (180 burpees)</option>
+  <option value="200" data-name="Master">Master (200 burpees)</option>
+  <option value="220" data-name="Legend">Legend (220 burpees)</option>
+  <option value="240" data-name="Hero">Hero (240 burpees)</option>
+  <option value="260" data-name="Titan">Titan (260 burpees)</option>
+  <option value="280" data-name="Godmode">Godmode (280 burpees)</option>
+  <option value="300" data-name="Immortal">Immortal (300 burpees)</option>
+</select>
+
+<div id="levelName">Level: Beginner</div>
+<div id="timer">20:00</div>
+<div id="timeUntilNext">Get ready: 5</div>
+<div>Elapsed: <span id="elapsed">00:00</span></div>
+
+<div id="burpeeCount">Burpees: 0</div>
+
+<button id="startBtn">Start</button>
+<button id="pauseBtn" disabled>Pause</button>
+<button id="resetBtn">Reset</button>
+</section>
+<script>
+  const levelSelect = document.getElementById('levelSelect');
+  const levelName = document.getElementById('levelName');
+  const timerDisplay = document.getElementById('timer');
+  const timeUntilNextDisplay = document.getElementById('timeUntilNext');
+  const elapsedDisplay = document.getElementById('elapsed');
+  const burpeeCountDisplay = document.getElementById('burpeeCount');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const body = document.body;
+
+  const totalSeconds = 20 * 60; // 20 minutes total
+  let intervalId;
+  let countdownIntervalId;
+  let remainingSeconds = totalSeconds;
+  let elapsedSeconds = 0;
+  let burpeeCount = 0;
+  let burpeesGoal = parseInt(levelSelect.value);
+  let secondsPerBurpee = totalSeconds / burpeesGoal;
+  let isRunning = false;
+  let audioContext;
+
+  // Preload countdown sounds (replace URLs if you want)
+  const beep3 = new Audio('short-beep-countdown-3-beeps.mp3');
+  const beep2 = new Audio('short-beep-countdown.mp3');
+
+  function updateDisplays() {
+    const minRem = Math.floor(remainingSeconds / 60);
+    const secRem = remainingSeconds % 60;
+    timerDisplay.textContent = `${minRem.toString().padStart(2, '0')}:${secRem.toString().padStart(2, '0')}`;
+
+    const minElap = Math.floor(elapsedSeconds / 60);
+    const secElap = elapsedSeconds % 60;
+    elapsedDisplay.textContent = `${minElap.toString().padStart(2, '0')}:${secElap.toString().padStart(2, '0')}`;
+
+    burpeeCountDisplay.textContent = `Burpees: ${burpeeCount}`;
+  }
+
+  function flashBackground() {
+    body.classList.add('flash');
+    setTimeout(() => body.classList.remove('flash'), 200);
+  }
+
+  function tick() {
+    if (remainingSeconds <= 0) {
+      clearInterval(intervalId);
+      isRunning = false;
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      alert('Workout complete! Great job!');
+      timeUntilNextDisplay.textContent = `Workout complete!`;
+      return;
+    }
+
+    remainingSeconds--;
+    elapsedSeconds++;
+
+    updateDisplays();
+
+    // Check if it’s time for next burpee
+    const burpeesDoneExpected = Math.floor(elapsedSeconds / secondsPerBurpee);
+    if (burpeesDoneExpected >= burpeeCount && burpeeCount < burpeesGoal) {
+      burpeeCount++;
+      beep2.play();
+      flashBackground();
+      updateDisplays();
+    }
+
+    // Update time until next burpee
+    const timeSinceLastBurpee = elapsedSeconds % secondsPerBurpee;
+    const untilNext = Math.ceil(secondsPerBurpee - timeSinceLastBurpee);
+    timeUntilNextDisplay.textContent = `Next burpee in: ${untilNext}s`;
+  }
+
+  function startCountdownAndWorkout() {
+    let countdown = 5;
+    timeUntilNextDisplay.textContent = `Get ready: ${countdown}`;
+    startBtn.disabled = true;
+    pauseBtn.disabled = true;
+
+    countdownIntervalId = setInterval(() => {
+      countdown--;
+      if (countdown === 3) beep3.play();
+
+      if (countdown > 0) {
+        timeUntilNextDisplay.textContent = `Get ready: ${countdown}`;
+      } else {
+        clearInterval(countdownIntervalId);
+        // Immediately do first burpee
+        burpeeCount = 1;
+        elapsedSeconds = 0;
+        remainingSeconds = totalSeconds;
+        updateDisplays();
+        beep2.play();
+        flashBackground();
+        timeUntilNextDisplay.textContent = `Next burpee in: ${Math.ceil(secondsPerBurpee)}s`;
+        // Start normal workout timer
+        isRunning = true;
+        pauseBtn.disabled = false;
+        intervalId = setInterval(tick, 1000);
+      }
+    }, 1000);
+  }
+
+  function startTimer() {
+    if (isRunning) return;
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    startCountdownAndWorkout();
+  }
+
+  function pauseTimer() {
+    if (!isRunning) return;
+    clearInterval(intervalId);
+    clearInterval(countdownIntervalId);
+    isRunning = false;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+  }
+
+  function resetTimer() {
+    clearInterval(intervalId);
+    clearInterval(countdownIntervalId);
+    remainingSeconds = totalSeconds;
+    elapsedSeconds = 0;
+    burpeeCount = 0;
+    isRunning = false;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    timeUntilNextDisplay.textContent = `Get ready: 5`;
+    updateDisplays();
+  }
+
+  levelSelect.addEventListener('change', () => {
+    burpeesGoal = parseInt(levelSelect.value);
+    levelName.textContent = 'Level: ' + levelSelect.selectedOptions[0].dataset.name;
+    secondsPerBurpee = totalSeconds / burpeesGoal;
+    resetTimer();
+  });
+
+  startBtn.addEventListener('click', startTimer);
+  pauseBtn.addEventListener('click', pauseTimer);
+  resetBtn.addEventListener('click', resetTimer);
+
+  updateDisplays();
+</script>
+
+<section style="text-align: left; max-width: 700px; margin: 40px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #eee; background: #333; padding: 25px; border-radius: 12px; box-shadow: 0 0 12px #222;">
+  <h2 style="text-align: center; color: #4caf50; margin-bottom: 20px;">How to Use the 20-Minute Burpee Challenge Timer</h2>
+
+  <p>Welcome to your 20-minute burpee challenge! This timer is designed to help you improve your fitness level progressively—from beginner all the way to “Immortal.” Here’s how to get the most out of it:</p>
+
+  <h3 style="color: #81c784; margin-top: 30px;">1. Choose Your Level</h3>
+  <p>Select your burpee goal level from the dropdown menu above. Each level corresponds to a total number of burpees to complete within 20 minutes, ranging from 20 at Beginner to 300 at Immortal. Pick a level that challenges you but is achievable based on your current fitness.</p>
+
+  <h3 style="color: #81c784; margin-top: 20px;">2. Understand the Pace</h3>
+  <p>The timer calculates a consistent pace for you to perform your burpees evenly throughout the 20 minutes. It shows how many seconds you should wait between each burpee, helping you maintain a steady rhythm without burning out too soon.</p>
+
+  <h3 style="color: #81c784; margin-top: 20px;">3. Countdown and Start</h3>
+  <p>Press <strong>Start</strong> to begin a 5-second countdown. You’ll hear a beep on each second during the countdown (3, 2, 1), so get ready! Right after the countdown, the first burpee beep will sound—perform your first burpee immediately.</p>
+
+  <h3 style="color: #81c784; margin-top: 20px;">4. Follow the Beeps</h3>
+  <p>After the first burpee, the timer will beep each time it’s time to do your next one. The screen also shows a “Next burpee in” countdown, so you know exactly when to move.</p>
+
+  <h3 style="color: #81c784; margin-top: 20px;">5. Track Your Progress</h3>
+  <p>The timer displays:</p>
+  <ul style="list-style-type: disc; margin-left: 20px; margin-top: 10px;">
+    <li>Total time remaining in the 20-minute workout</li>
+    <li>How many burpees you’ve completed</li>
+    <li>Elapsed time since the workout started</li>
+    <li>Time until your next burpee</li>
+  </ul>
+  <p>Use these to pace yourself and stay motivated.</p>
+
+  <h3 style="color: #81c784; margin-top: 20px;">6. Pause or Reset Anytime</h3>
+  <p>If you need a break, hit <strong>Pause</strong>. When ready, hit <strong>Start</strong> to resume. You can also <strong>Reset</strong> at any time to start over.</p>
+
+  <h3 style="color: #81c784; margin-top: 30px;">Tips for Success</h3>
+  <ul style="list-style-type: square; margin-left: 20px; margin-top: 10px;">
+    <li>Maintain proper form to avoid injury. Quality over quantity!</li>
+    <li>Breathe steadily and pace yourself to last the full 20 minutes.</li>
+    <li>Use this timer regularly to build endurance and strength over time.</li>
+    <li>Challenge yourself by moving up levels as you get fitter.</li>
+  </ul>
+
+  <p style="text-align: center; margin-top: 30px; font-size: 1.2rem; color: #aed581;"><strong>Good luck and have fun crushing those burpees! Remember, consistency is key — every rep gets you stronger. Let’s get moving! 💪</strong></p>
+</section>
+
+
+</body>
+</html>
